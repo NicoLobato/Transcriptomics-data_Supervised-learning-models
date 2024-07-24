@@ -4,7 +4,7 @@ This repository contains **Machine Learning (ML) algorithms** for analysing **tr
 
 Samples are characterised by three traits to predict: **treatment type** (Control/Drought), **stem type** (Tolerant/Sensitive) and **root type** (Tolerant/Sensitive). Consequently, the repository is divided into the following sections:
 
-- Section 0: Data Preparation ![Data Preparation](data_preparation.R)
+- Section 0: Data Preparation ![Data Preparation](prueba.md)
 
 ## Treatment type
 - Section 1: Lasso-penalised Logistic Regression
