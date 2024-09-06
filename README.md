@@ -7,7 +7,7 @@ Samples are characterised by three traits to predict: **Treatment type** (Contro
 - Section 0: ![Data Preparation](data_preparation.md)
 
 ## Treatment type
-- Section 1: Lasso-penalised Logistic Regression
+- Section 1: ![Lasso-penalised Logistic Regression](treatment_lasso_kfold_cv.md)
 - Section 2: Random Forest
 - Section 3: Boosting
 - Section 4: SVM
