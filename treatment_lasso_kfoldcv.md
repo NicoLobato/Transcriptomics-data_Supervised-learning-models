@@ -125,7 +125,7 @@ for (fold in 1:k) {
 Therefore, we obtain a data frame with all predictions, which allows us to create the confusion matrix:
 
 ```
-table(cv_results$Predicted, cv_results$Actual) # TP = 11 ; FP = 3; FN= 1; TN = 9
+table(cv_results$Predicted, cv_results$Actual) # TP = 10 ; FP = 1; FN= 2; TN = 11
 ```
 
 We can generate the ROC curve:
