@@ -27,22 +27,22 @@ head(prepared_data[,0:10])
 str(prepared_data)
 ```
 
-This analysis will focus on the root type. As we see, the data consists of 206,574 gene expression levels from 24 individuals. This indicates that we have significantly more variables than samples, necessitating the use of a Logistic Regression model with Lasso penalisation.
+This analysis will focus on the stem type. As we see, the data consists of 206,574 gene expression levels from 24 individuals. This indicates that we have significantly more variables than samples, necessitating the use of a Logistic Regression model with Lasso penalisation.
 
-## Study of the root type effect
+## Study of the stem type effect
 
-Before starting, we need to select only the columns relevant to this binary analysis, discarding Treatment and Stem types:
+Before starting, we need to select only the columns relevant to this binary analysis, discarding Treatment and Root types:
 
 ```
 data <- prepared_data %>%
-  select(-c(treatment,stem))
+  select(-c(treatment,root))
 rm(prepared_data)
 ```
 
 We check if our data is balanced:
 
 ```
-table(data$root) # 2 classes of 12 observations each
+table(data$stem) # 2 classes of 12 observations each
 ```
 
 As we can see, our data is perfectly balanced, containing 2 classes with 12 observations each. This small sample size results in insufficient samples in the test set after splitting the data, leading to prediction errors. This issue was previously observed in the script "treatment_lasso.md", where the model's performance was affected. To overcome these limitations, we will perform k-fold cross-validation with k=4, resulting in 4 folds of 6 samples each and providing a total of 24 predictions.
@@ -50,7 +50,7 @@ As we can see, our data is perfectly balanced, containing 2 classes with 12 obse
 ```
 n <- nrow(data)
 k <- 4  # number of folds
-folds <- createFolds(data$root, k = k, list = TRUE, returnTrain = FALSE) # create stratified folds indices
+folds <- createFolds(data$stem, k = k, list = TRUE, returnTrain = FALSE) # create stratified folds indices
 cv_results <- data.frame(Actual = character(n), Predicted = character(n), stringsAsFactors = FALSE)
 all_probs <- numeric(n) # vector to store predicted probabilities
 ```
@@ -74,9 +74,9 @@ for (fold in 1:k) {
   test_set$Sample_ID <- NULL
   
   x_train <- as.matrix(train_set[,-1])
-  y_train <- as.factor(train_set$root)
+  y_train <- as.factor(train_set$stem)
   x_test <- as.matrix(test_set[,-1])
-  y_test <- as.factor(test_set$root)
+  y_test <- as.factor(test_set$stem)
   
   # Training set preprocessing
   x_train_prep <- t(x_train)
@@ -126,7 +126,7 @@ We obtain a data frame with all predictions, which allows us to create the confu
 table(cv_results$Predicted, cv_results$Actual)
 ```
 
-From the confusion matrix, we achieve a perfect accuracy of 1.
+From the confusion matrix, we obtain an average accuracy of approximately 0.54.
 
 Then, we can generate the ROC curve:
 
@@ -136,10 +136,10 @@ plot(ROCit_lasso, col = c(1,"gray50"), legend = FALSE, YIndex = FALSE)
 legend("bottomright", col = 1, legend = paste("Lasso (AUC =",round(ROCit_lasso$AUC,2),")"), lwd = 2)
 ```
 
-We observe that our model's AUC value is also perfect, being 1.
+We observe that the average AUC value of our model is approximately 0.57.
 
 ```
-save(ROCit_lasso, file = "results/root/lasso_ROC.RData")
+save(ROCit_lasso, file = "results/stem/lasso_ROC.RData")
 ```
 
 We save the ROC curve for comparison with other classifiers. It is crucial to ensure that the same number of variables is used in the models being compared to maintain the validity of the comparison.

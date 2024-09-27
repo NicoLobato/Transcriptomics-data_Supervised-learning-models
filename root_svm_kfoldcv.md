@@ -1,13 +1,13 @@
-# Lasso-penalised Logistic Regression
+# Support Vector Machines (SVM)
 
 ## Loading libraries
 
 ```
 library("tidyverse")
-library("caret")
+library(caret)
 library("NOISeq")
 library("limma")
-library("glmnet")
+library("e1071")
 library("ROCit")
 ```
 
@@ -19,15 +19,7 @@ We load the prepared data from the "0.data_preparation.md" file:
 load("data/prepared_data.RData")
 ```
 
-## Exploratory data analysis
-
-```
-dim(prepared_data) # 24 44885
-head(prepared_data[,0:10])
-str(prepared_data)
-```
-
-This analysis will focus on the root type. As we see, the data consists of 206,574 gene expression levels from 24 individuals. This indicates that we have significantly more variables than samples, necessitating the use of a Logistic Regression model with Lasso penalisation.
+This model will focus on the root type.
 
 ## Study of the root type effect
 
@@ -45,7 +37,9 @@ We check if our data is balanced:
 table(data$root) # 2 classes of 12 observations each
 ```
 
-As we can see, our data is perfectly balanced, containing 2 classes with 12 observations each. This small sample size results in insufficient samples in the test set after splitting the data, leading to prediction errors. This issue was previously observed in the script "treatment_lasso.md", where the model's performance was affected. To overcome these limitations, we will perform k-fold cross-validation with k=4, resulting in 4 folds of 6 samples each and providing a total of 24 predictions.
+As we see, our data is perfectly balanced, containing 2 classes with 12 observations each. 
+
+Once again, we will proceed with k-fold cross-validation with k=4 to overcome the limitation of the small sample size.
 
 ```
 n <- nrow(data)
@@ -57,7 +51,7 @@ all_probs <- numeric(n) # vector to store predicted probabilities
 
 ## Model creation
 
-It is also important to mention that during the preprocessing steps (data normalisation is essential for Logistic Regression), we will use the TMM + VOOM normalisation method directly, as it is the standard approach in transcriptomics and has been shown to be the most effective for our data.
+We must remember that SVM also requires data normalisation.
 
 ```
 for (fold in 1:k) {
@@ -67,7 +61,7 @@ for (fold in 1:k) {
   # Splitting the data into training and test sets
   test_set <- data[test_indices, ]
   train_set <- data[-test_indices, ] # select all rows except those in the test set
-  
+
   train_id <- train_set$Sample_ID
   test_id <- test_set$Sample_ID
   train_set$Sample_ID <- NULL
@@ -104,18 +98,26 @@ for (fold in 1:k) {
   x_train_final <- t(x_train_final) # transpose to have the genes by columns
   x_test_final <- t(x_test_final)
   
-  # Fit the model
-  cv.lasso <- cv.glmnet(x_train_final, y_train, family = "binomial", type.measure = "class", alpha = 1)
-  
-  model <- glmnet(x_train_final, y_train, alpha = 1, family = "binomial", lambda = cv.lasso$lambda.min)
-  
-  # Make predictions
-  probs <- predict(model, newx = x_test_final, type = "response")
-  
-  all_probs[test_indices] <- probs # store predicted probabilities
+  # SVM model
+  x_train_final <- as.data.frame(x_train_final)
+  x_test_final <- as.data.frame(x_test_final)
+  x_train_final$root <- y_train
 
-  predictions <- ifelse(probs > 0.5, "Tolerant", "Sensitive")
+  cost_values = c(0.001, 0.01, 0.1, 1, 5, 10, 100)
+  
+  # Hyperparameter tuning: selecting the optimal cost value
+  tune_out = tune(svm, factor(root) ~ ., data = x_train_final, kernel = "radial", ranges = list(cost = cost_values), probability = TRUE)
+  
+  best_model = tune_out$best.model
+  
+  # Make predictions using the best model
+  probs <- predict(best_model, newdata = x_test_final, probability=TRUE)
+  probs <- attr(probs, "probabilities") # select the probabilities
+  
+  predictions <- ifelse(probs[,"Tolerant"] > 0.5, "Tolerant", "Sensitive")
 
+  all_probs[test_indices] <- probs[,"Tolerant"] # store predicted probabilities
+  
   cv_results[test_indices, ] <- data.frame(Actual = as.character(y_test), Predicted = predictions, stringsAsFactors = FALSE) # store results
 }
 ```
@@ -131,15 +133,28 @@ From the confusion matrix, we achieve a perfect accuracy of 1.
 Then, we can generate the ROC curve:
 
 ```
-ROCit_lasso <- rocit(score = all_probs, class = as.factor(cv_results$Actual))
-plot(ROCit_lasso, col = c(1,"gray50"), legend = FALSE, YIndex = FALSE)
-legend("bottomright", col = 1, legend = paste("Lasso (AUC =",round(ROCit_lasso$AUC,2),")"), lwd = 2)
+ROCit_svm <- rocit(score = all_probs, class = as.factor(cv_results$Actual))
+plot(ROCit_svm, col = c(1,"gray50"), legend = FALSE, YIndex = FALSE)
+legend("bottomright", col = 1, legend = paste("SVM (AUC =",round(ROCit_svm$AUC,2),")"), lwd = 2)
 ```
 
 We observe that our model's AUC value is also perfect, being 1.
 
+We can now compare our model's ROC curve with those of the Lasso and Random Forest models:
+
 ```
-save(ROCit_lasso, file = "results/root/lasso_ROC.RData")
+load("results/root/lasso_ROC.RData")
+load("results/root/rf_ROC.RData")
+
+ROCit_svm <- rocit(score = all_probs, class = as.factor(cv_results$Actual))
+plot(ROCit_svm, col = c(1,"gray50"), legend = FALSE, YIndex = FALSE)
+lines(ROCit_lasso$TPR~ROCit_lasso$FPR, col = 2, lwd = 2)
+lines(ROCit_rf$TPR~ROCit_rf$FPR, col = 3, lwd = 2)
+legend("bottomright", col = c(1,2,3), c("SVM","Lasso","RF"), lwd = 2)
 ```
 
-We save the ROC curve for comparison with other classifiers. It is crucial to ensure that the same number of variables is used in the models being compared to maintain the validity of the comparison.
+We save the ROC curve.
+
+```
+save(ROCit_svm, file = "results/root/svm_ROC.RData")
+```

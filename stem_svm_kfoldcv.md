@@ -1,13 +1,13 @@
-# Random Forest
+# Support Vector Machines (SVM)
 
 ## Loading libraries
 
 ```
 library("tidyverse")
-library("caret")
+library(caret)
 library("NOISeq")
 library("limma")
-library("randomForest")
+library("e1071")
 library("ROCit")
 ```
 
@@ -19,22 +19,22 @@ We load the prepared data from the "0.data_preparation.md" file:
 load("data/prepared_data.RData")
 ```
 
-This model will focus on the treatment type.
+This model will focus on the stem type.
 
-## Study of the treatment type effect
+## Study of the stem type effect
 
-Before starting, we need to select only the columns relevant to this binary analysis, discarding Treatment and Stem types:
+Before starting, we need to select only the columns relevant to this binary analysis, discarding Treatment and Root types:
 
 ```
 data <- prepared_data %>%
-  select(-c(stem,root))
+  select(-c(treatment,root))
 rm(prepared_data)
 ```
 
 We check if our data is balanced:
 
 ```
-table(data$treatment) # 2 classes of 12 observations each
+table(data$stem) # 2 classes of 12 observations each
 ```
 
 As we see, our data is perfectly balanced, containing 2 classes with 12 observations each. 
@@ -44,14 +44,14 @@ Once again, we will proceed with k-fold cross-validation with k=4 to overcome th
 ```
 n <- nrow(data)
 k <- 4  # number of folds
-folds <- createFolds(data$treatment, k = k, list = TRUE, returnTrain = FALSE) # create stratified folds indices
+folds <- createFolds(data$stem, k = k, list = TRUE, returnTrain = FALSE) # create stratified folds indices
 cv_results <- data.frame(Actual = character(n), Predicted = character(n), stringsAsFactors = FALSE)
 all_probs <- numeric(n) # vector to store predicted probabilities
 ```
 
 ## Model creation
 
-We must remember that Random Forest models do not require data normalisation (unlike Logistic Regression models). However, to ensure our models are as comparable as possible, we will apply the same preprocessing steps, including data normalisation and the selection of the most significant variables.
+We must remember that SVM also requires data normalisation.
 
 ```
 for (fold in 1:k) {
@@ -68,9 +68,9 @@ for (fold in 1:k) {
   test_set$Sample_ID <- NULL
   
   x_train <- as.matrix(train_set[,-1])
-  y_train <- as.factor(train_set$treatment)
+  y_train <- as.factor(train_set$stem)
   x_test <- as.matrix(test_set[,-1])
-  y_test <- as.factor(test_set$treatment)
+  y_test <- as.factor(test_set$stem)
   
   # Training set preprocessing
   x_train_prep <- t(x_train)
@@ -98,18 +98,25 @@ for (fold in 1:k) {
   x_train_final <- t(x_train_final) # transpose to have the genes by columns
   x_test_final <- t(x_test_final)
   
-  # RF model
-  rf.treatment <- randomForest(x = x_train_final, y = y_train, ntree = 500, mtry = sqrt(ncol(x_train_final)), importance = TRUE) # we use this standard value of 'mtry' for classification problems
-                             
-  print(rf.treatment)
-  
-  # Make predictions
-  
-  probs <- predict(rf.treatment, newdata = x_test_final, type = "prob")
-  
-  predictions <- ifelse(probs[,"Drought"] > 0.5, "Drought", "Control")
+  # SVM model
+  x_train_final <- as.data.frame(x_train_final)
+  x_test_final <- as.data.frame(x_test_final)
+  x_train_final$stem <- y_train
 
-  all_probs[test_indices] <- probs[,"Drought"] # store predicted probabilities
+  cost_values = c(0.001, 0.01, 0.1, 1, 5, 10, 100)
+  
+  # Hyperparameter tuning: selecting the optimal cost value
+  tune_out = tune(svm, factor(stem) ~ ., data = x_train_final, kernel = "radial", ranges = list(cost = cost_values), probability = TRUE)
+  
+  best_model = tune_out$best.model
+  
+  # Make predictions using the best model
+  probs <- predict(best_model, newdata = x_test_final, probability=TRUE)
+  probs <- attr(probs, "probabilities") # select the probabilities
+  
+  predictions <- ifelse(probs[,"Tolerant"] > 0.5, "Tolerant", "Sensitive")
+
+  all_probs[test_indices] <- probs[,"Tolerant"] # store predicted probabilities
   
   cv_results[test_indices, ] <- data.frame(Actual = as.character(y_test), Predicted = predictions, stringsAsFactors = FALSE) # store results
 }
@@ -121,31 +128,33 @@ We obtain a data frame with all predictions, which allows us to create the confu
 table(cv_results$Predicted, cv_results$Actual)
 ```
 
-From the confusion matrix, we obtain an average accuracy of approximately 0.96.
+From the confusion matrix, we obtain an average accuracy of approximately 0.4.
 
 Then, we can generate the ROC curve:
 
 ```
-ROCit_rf <- rocit(score = all_probs, class = as.factor(cv_results$Actual))
-plot(ROCit_rf, col = c(1,"gray50"), legend = FALSE, YIndex = FALSE)
-legend("bottomright", col = 1, legend = paste("RF (AUC =",round(ROCit_rf$AUC,2),")"), lwd = 2)
+ROCit_svm <- rocit(score = all_probs, class = as.factor(cv_results$Actual))
+plot(ROCit_svm, col = c(1,"gray50"), legend = FALSE, YIndex = FALSE)
+legend("bottomright", col = 1, legend = paste("SVM (AUC =",round(ROCit_svm$AUC,2),")"), lwd = 2)
 ```
 
-We observe that the average AUC value of our model is approximately 0.92.
+We observe that the average AUC value of our model is approximately 0.41.
 
-We can now compare our model's ROC curve with that of the Lasso model:
+We can now compare our model's ROC curve with those of the Lasso and Random Forest models:
 
 ```
-load("results/treatment/lasso_ROC.RData")
+load("results/stem/lasso_ROC.RData")
+load("results/stem/rf_ROC.RData")
 
-ROCit_rf <- rocit(score = all_probs, class = as.factor(cv_results$Actual))
-plot(ROCit_rf, col = c(1,"gray50"), legend = FALSE, YIndex = FALSE)
+ROCit_svm <- rocit(score = all_probs, class = as.factor(cv_results$Actual))
+plot(ROCit_svm, col = c(1,"gray50"), legend = FALSE, YIndex = FALSE)
 lines(ROCit_lasso$TPR~ROCit_lasso$FPR, col = 2, lwd = 2)
-legend("bottomright", col = c(1,2), c("RF","Lasso"), lwd = 2)
+lines(ROCit_rf$TPR~ROCit_rf$FPR, col = 3, lwd = 2)
+legend("bottomright", col = c(1,2,3), c("SVM","Lasso","RF"), lwd = 2)
 ```
 
-We save the ROC curve for next comparisons.
+We save the ROC curve.
 
 ```
-save(ROCit_rf, file = "results/treatment/rf_ROC.RData")
+save(ROCit_svm, file = "results/stem/svm_ROC.RData")
 ```
