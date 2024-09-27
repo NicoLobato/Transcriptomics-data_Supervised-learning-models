@@ -1,4 +1,4 @@
-# Random Forest
+# Random Forest for Treatment Type
 
 ## Loading libraries
 

@@ -1,4 +1,4 @@
-# Lasso-penalised Logistic Regression
+# Lasso-penalised Logistic Regression for Root Type
 
 ## Loading libraries
 

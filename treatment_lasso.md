@@ -1,4 +1,4 @@
-# Lasso-penalised Logistic Regression
+# Lasso-penalised Logistic Regression for Treatment Type
 
 ## Loading libraries
 

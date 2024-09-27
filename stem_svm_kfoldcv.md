@@ -1,4 +1,4 @@
-# Support Vector Machines (SVM)
+# Support Vector Machines (SVM) for Stem Type
 
 ## Loading libraries
 

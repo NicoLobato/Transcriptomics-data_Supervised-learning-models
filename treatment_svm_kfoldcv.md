@@ -1,4 +1,4 @@
-# Support Vector Machines (SVM)
+# Support Vector Machines (SVM) for Treatment Type
 
 ## Loading libraries
 
