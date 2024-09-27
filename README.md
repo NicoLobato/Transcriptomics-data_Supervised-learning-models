@@ -5,7 +5,7 @@ This repository contains **Machine Learning (ML) algorithms** for analysing **tr
 Samples are characterised by three traits to predict: **Treatment type** (Control/Drought), **Stem type** (Tolerant/Sensitive) and **Root type** (Tolerant/Sensitive). Consequently, the repository is divided into the following sections:
 
 - Section 0: ![Data Preparation](data_preparation.md)
-- Section 1: ![Lasso-penalised Logistic Regression for **treatmen** type](treatment_lasso_kfoldcv.md)
+- Section 1: ![Lasso-penalised Logistic Regression for **treatment** type](treatment_lasso_kfoldcv.md)
 - Section 2: ![Random Forest for **treatment** type](treatment_rf_kfoldcv.md)
 - Section 3: ![SVM for **treatment** type](treatment_svm_kfoldcv.md)
 - Section 4: ![Lasso-penalised Logistic Regression for **stem** type](stem_lasso_kfoldcv.md)
