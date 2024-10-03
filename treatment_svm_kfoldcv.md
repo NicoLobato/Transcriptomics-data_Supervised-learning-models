@@ -1,4 +1,4 @@
-# Support Vector Machines (SVM) for Treatment Type
+# Support Vector Machines for Treatment Type
 
 ## Loading libraries
 
@@ -51,7 +51,7 @@ all_probs <- numeric(n) # vector to store predicted probabilities
 
 ## Model creation
 
-We must remember that SVM also requires data normalisation.
+We must remember that Support Vector Machines (SVM) also requires data normalisation.
 
 ```
 for (fold in 1:k) {
