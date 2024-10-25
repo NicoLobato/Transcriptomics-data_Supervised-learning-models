@@ -1,4 +1,4 @@
-# Support Vector Machines for Treatment Type
+# Support Vector Machines for Scion Type
 
 ## Loading libraries
 
@@ -19,22 +19,22 @@ We load the prepared data from the "0.data_preparation.md" file:
 load("data/prepared_data.RData")
 ```
 
-This model will focus on the treatment type.
+This model will focus on the scion type.
 
-## Study of the treatment type effect
+## Study of the scion type effect
 
-Before starting, we need to select only the columns relevant to this binary analysis, discarding the Scion and Rootstock types:
+Before starting, we need to select only the columns relevant to this binary analysis, discarding the Treatment and Rootstock types:
 
 ```
 data <- prepared_data %>%
-  select(-c(scion,rootstock))
+  select(-c(treatment,rootstock))
 rm(prepared_data)
 ```
 
 We check if our data is balanced:
 
 ```
-table(data$treatment) # 2 classes of 12 observations each
+table(data$scion) # 2 classes of 12 observations each
 ```
 
 As we see, our data is perfectly balanced, containing 2 classes with 12 observations each. 
@@ -44,7 +44,7 @@ Once again, we will proceed with k-fold cross-validation with k=4 to overcome th
 ```
 n <- nrow(data)
 k <- 4  # number of folds
-folds <- createFolds(data$treatment, k = k, list = TRUE, returnTrain = FALSE) # create stratified folds indices
+folds <- createFolds(data$scion, k = k, list = TRUE, returnTrain = FALSE) # create stratified folds indices
 cv_results <- data.frame(Actual = character(n), Predicted = character(n), stringsAsFactors = FALSE)
 all_probs <- numeric(n) # vector to store predicted probabilities
 ```
@@ -68,9 +68,9 @@ for (fold in 1:k) {
   test_set$Sample_ID <- NULL
   
   x_train <- as.matrix(train_set[,-1])
-  y_train <- as.factor(train_set$treatment)
+  y_train <- as.factor(train_set$scion)
   x_test <- as.matrix(test_set[,-1])
-  y_test <- as.factor(test_set$treatment)
+  y_test <- as.factor(test_set$scion)
   
   # Training set preprocessing
   x_train_prep <- t(x_train)
@@ -101,12 +101,12 @@ for (fold in 1:k) {
   # SVM model
   x_train_final <- as.data.frame(x_train_final)
   x_test_final <- as.data.frame(x_test_final)
-  x_train_final$treatment <- y_train
+  x_train_final$scion <- y_train
 
   cost_values = c(0.001, 0.01, 0.1, 1, 5, 10, 100)
   
   # Hyperparameter tuning: selecting the optimal cost value
-  tune_out = tune(svm, factor(treatment) ~ ., data = x_train_final, kernel = "radial", ranges = list(cost = cost_values), probability = TRUE)
+  tune_out = tune(svm, factor(scion) ~ ., data = x_train_final, kernel = "radial", ranges = list(cost = cost_values), probability = TRUE)
   
   best_model = tune_out$best.model
   
@@ -114,9 +114,9 @@ for (fold in 1:k) {
   probs <- predict(best_model, newdata = x_test_final, probability=TRUE)
   probs <- attr(probs, "probabilities") # select the probabilities
   
-  predictions <- ifelse(probs[,"Drought"] > 0.5, "Drought", "Control")
+  predictions <- ifelse(probs[,"Tolerant"] > 0.5, "Tolerant", "Sensitive")
 
-  all_probs[test_indices] <- probs[,"Drought"] # store predicted probabilities
+  all_probs[test_indices] <- probs[,"Tolerant"] # store predicted probabilities
   
   cv_results[test_indices, ] <- data.frame(Actual = as.character(y_test), Predicted = predictions, stringsAsFactors = FALSE) # store results
 }
@@ -128,7 +128,7 @@ We obtain a data frame with all predictions, which allows us to create the confu
 table(cv_results$Predicted, cv_results$Actual)
 ```
 
-From the confusion matrix, we obtain an average accuracy of approximately 0.74.
+From the confusion matrix, we obtain an average accuracy of approximately 0.4.
 
 Then, we can generate the ROC curve:
 
@@ -138,13 +138,13 @@ plot(ROCit_svm, col = c(3,"gray50"), legend = FALSE, YIndex = FALSE)
 legend("bottomright", col = 3, legend = paste("SVM (AUC =",round(ROCit_svm$AUC,2),")"), lwd = 2)
 ```
 
-We observe that the average AUC value of our model is approximately 0.8.
+We observe that the average AUC value of our model is approximately 0.41.
 
 We can now compare our model's ROC curve with those of the Lasso and Random Forest models:
 
 ```
-load("results/treatment/lasso_ROC.RData")
-load("results/treatment/rf_ROC.RData")
+load("results/scion/lasso_ROC.RData")
+load("results/scion/rf_ROC.RData")
 
 ROCit_svm <- rocit(score = all_probs, class = as.factor(cv_results$Actual))
 plot(ROCit_svm, col = c(3,"gray50"), legend = FALSE, YIndex = FALSE)
@@ -156,5 +156,5 @@ legend("bottomright", col = c(1,2,3), c("Lasso","RF","SVM"), lwd = 2)
 We save the ROC curve.
 
 ```
-save(ROCit_svm, file = "results/treatment/svm_ROC.RData")
+save(ROCit_svm, file = "results/scion/svm_ROC.RData")
 ```

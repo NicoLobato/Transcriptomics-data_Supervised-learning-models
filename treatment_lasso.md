@@ -1,4 +1,4 @@
-# Lasso-penalised Logistic Regression for Treatment Type
+# Lasso-penalized Logistic Regression (without k-fold CV) for Treatment Type
 
 ## Loading libraries
 
@@ -27,15 +27,15 @@ head(prepared_data[,0:10])
 str(prepared_data)
 ```
 
-The initial analysis will focus on the treatment type. As we see, the data consists of 206,574 gene expression levels from 24 individuals. This indicates that we have significantly more variables than samples, necessitating the use of a Logistic Regression model with Lasso penalisation.
+The initial analysis will focus on the treatment type. As we see, the data consists of 206,574 gene expression levels from 24 individuals. This indicates that we have significantly more variables than samples, necessitating the use of a Logistic Regression model with Lasso penalization.
 
 ## Study of the treatment type effect
 
-Before starting, we need to select only the columns relevant to this binary analysis, discarding Stem and Root types:
+Before starting, we need to select only the columns relevant to this binary analysis, discarding the Scion and Rootstock types:
 
 ```
 data <- prepared_data %>%
-  select(-c(stem,root))
+  select(-c(scion,rootstock))
 rm(prepared_data)
 ```
 
@@ -81,7 +81,7 @@ table(y_test)
 
 We now need to preprocess the data. The process follows this order because typically, a test set does not exist until we apply the model. However, in this case, we are fortunate to have one. Therefore, we begin by splitting the data into two independent sets to avoid data contamination.
 
-Preprocessing includes data normalisation (a crucial step for Logistic Regression) and selecting genes with higher variability (which are more significant). This reduces the number of variables and enhances the data quality.
+Preprocessing includes data normalization (a crucial step for Logistic Regression) and selecting genes with higher variability (which are more significant). This reduces the number of variables and enhances the data quality.
 
 We will start by preprocessing the training set:
 
@@ -91,9 +91,9 @@ x_train_prep <- t(x_train)
 colnames(x_train_prep) <- train_id
 dim(x_train_prep) # 44881    18
 head(x_train_prep)
-str(x_train_prep)
+summary(x_train_prep)
 
-# We apply 3 popular normalisation methods in RNA-Seq techniques: VOOM, TMM and TMM + VOOM
+# We apply 3 popular normalization methods in RNA-Seq techniques: VOOM, TMM and TMM + VOOM
 # VOOM
 x_train_prep_norm_voom <- voom(x_train_prep)
 # TMM
@@ -101,19 +101,19 @@ x_train_prep_norm_tmm <- tmm(x_train_prep)
 # TMM + VOOM
 x_train_prep_norm_tmm_voom <- voom(x_train_prep_norm_tmm)
 
-# We convert the previous objects into data.frame to boxplot them before and after normalisation:
+# We convert the previous objects into data.frame to boxplot them before and after normalization:
 x_train_prep_df <- as.data.frame(x_train_prep)
 x_train_prep_norm_voom_df <- as.data.frame(x_train_prep_norm_voom)
 x_train_prep_norm_tmm_df <- as.data.frame(x_train_prep_norm_tmm)
 x_train_prep_norm_tmm_voom_df <- as.data.frame(x_train_prep_norm_tmm_voom)
 
 # We plot and compare them:
-boxplot(x_train_prep_df, outline=FALSE, main="Before normalisation", xaxt="n")
-boxplot(x_train_prep_norm_voom_df, outline=FALSE, main="After normalisation with VOOM", xaxt="n")
-boxplot(x_train_prep_norm_tmm_df, outline=FALSE, main="After normalisation with TMM", xaxt="n")
-boxplot(x_train_prep_norm_tmm_voom_df, outline=FALSE, main="After normalisation with TMM + VOOM", xaxt="n")
+boxplot(x_train_prep_df, outline=FALSE, main="Before normalization", xaxt="n")
+boxplot(x_train_prep_norm_voom_df, outline=FALSE, main="After normalization with VOOM", xaxt="n")
+boxplot(x_train_prep_norm_tmm_df, outline=FALSE, main="After normalization with TMM", xaxt="n")
+boxplot(x_train_prep_norm_tmm_voom_df, outline=FALSE, main="After normalization with TMM + VOOM", xaxt="n")
 
-# We select TMM + VOOM normalisation because is the most suitable for our data.
+# We select TMM + VOOM normalization because is the most suitable for our data.
 
 # We now choose the 1500 genes with more variance
 varianza <- apply(x_train_prep_norm_tmm_voom_df, 1, stats::var)
@@ -134,7 +134,7 @@ x_test_prep <- t(x_test)
 colnames(x_test_prep) <- test_id
 dim(x_test_prep) # 44881     6
 head(x_test_prep)
-str(x_test_prep)
+summary(x_test_prep)
 
 # VOOM
 x_test_prep_norm_voom <- voom(x_test_prep)
@@ -148,12 +148,12 @@ x_test_prep_norm_voom_df <- as.data.frame(x_test_prep_norm_voom)
 x_test_prep_norm_tmm_df <- as.data.frame(x_test_prep_norm_tmm)
 x_test_prep_norm_tmm_voom_df <- as.data.frame(x_test_prep_norm_tmm_voom)
 
-boxplot(x_test_prep_df, outline=FALSE, main="Before normalisation", xaxt="n")
-boxplot(x_test_prep_norm_voom_df, outline=FALSE, main="After normalisation with VOOM", xaxt="n")
-boxplot(x_test_prep_norm_tmm_df, outline=FALSE, main="After normalisation with TMM", xaxt="n")
-boxplot(x_test_prep_norm_tmm_voom_df, outline=FALSE, main="After normalisation with TMM + VOOM", xaxt="n")
+boxplot(x_test_prep_df, outline=FALSE, main="Before normalization", xaxt="n")
+boxplot(x_test_prep_norm_voom_df, outline=FALSE, main="After normalization with VOOM", xaxt="n")
+boxplot(x_test_prep_norm_tmm_df, outline=FALSE, main="After normalization with TMM", xaxt="n")
+boxplot(x_test_prep_norm_tmm_voom_df, outline=FALSE, main="After normalization with TMM + VOOM", xaxt="n")
 
-# The most suitable normalisation method is TMM + VOOM again.
+# The most suitable normalization method is TMM + VOOM again.
 
 # We now select the 1500 genes that were chosen in the training set before:
 x_test_final <- x_test_prep_norm_tmm_voom_df[genes_train,]
@@ -161,14 +161,14 @@ sum(is.na(x_test_final)) # ensure there are no missing values
 dim(x_test_final) # 1500    6
 ```
 
-Once the data has been normalised and reduced, we can proceed with the model.
+Once the data has been normalized and reduced, we can proceed with the model.
 
 ```
 x_train_final <- t(x_train_final) # transpose to have the genes by columns
 x_test_final <- t(x_test_final)
 ```
 
-We then apply k-fold cross-validation to determine the optimal value for the regularisation parameter lambda (model tuning).
+We then apply k-fold cross-validation to determine the optimal value for the regularization parameter lambda (model tuning).
 
 ```
 cv.lasso <- cv.glmnet(x_train_final, y_train, family = "binomial", type.measure = "class",
@@ -177,7 +177,7 @@ plot(cv.lasso)
 print(cv.lasso$lambda.min) # 0.3468004
 ```
 
-Therefore, this is the optimal lambda value (which minimises the classification error) that will be used to fit the final model.
+Therefore, this is the optimal lambda value (which minimizes the classification error) that will be used to fit the final model.
 
 ## Fit the final model on the training data
 

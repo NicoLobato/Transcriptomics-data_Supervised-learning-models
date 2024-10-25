@@ -23,11 +23,11 @@ This model will focus on the treatment type.
 
 ## Study of the treatment type effect
 
-Before starting, we need to select only the columns relevant to this binary analysis, discarding Treatment and Stem types:
+Before starting, we need to select only the columns relevant to this binary analysis, discarding the Scion and Rootstock types:
 
 ```
 data <- prepared_data %>%
-  select(-c(stem,root))
+  select(-c(scion,rootstock))
 rm(prepared_data)
 ```
 
@@ -51,7 +51,7 @@ all_probs <- numeric(n) # vector to store predicted probabilities
 
 ## Model creation
 
-We must remember that Random Forest models do not require data normalisation (unlike Logistic Regression models). However, to ensure our models are as comparable as possible, we will apply the same preprocessing steps, including data normalisation and the selection of the most significant variables.
+We must remember that Random Forest models do not require data normalization (unlike Logistic Regression models). However, to ensure our models are as comparable as possible, we will apply the same preprocessing steps, including data normalization and the selection of the most significant variables.
 
 ```
 for (fold in 1:k) {
@@ -127,8 +127,8 @@ Then, we can generate the ROC curve:
 
 ```
 ROCit_rf <- rocit(score = all_probs, class = as.factor(cv_results$Actual))
-plot(ROCit_rf, col = c(1,"gray50"), legend = FALSE, YIndex = FALSE)
-legend("bottomright", col = 1, legend = paste("RF (AUC =",round(ROCit_rf$AUC,2),")"), lwd = 2)
+plot(ROCit_rf, col = c(2,"gray50"), legend = FALSE, YIndex = FALSE)
+legend("bottomright", col = 2, legend = paste("RF (AUC =",round(ROCit_rf$AUC,2),")"), lwd = 2)
 ```
 
 We observe that the average AUC value of our model is approximately 0.92.
@@ -139,9 +139,9 @@ We can now compare our model's ROC curve with that of the Lasso model:
 load("results/treatment/lasso_ROC.RData")
 
 ROCit_rf <- rocit(score = all_probs, class = as.factor(cv_results$Actual))
-plot(ROCit_rf, col = c(1,"gray50"), legend = FALSE, YIndex = FALSE)
-lines(ROCit_lasso$TPR~ROCit_lasso$FPR, col = 2, lwd = 2)
-legend("bottomright", col = c(1,2), c("RF","Lasso"), lwd = 2)
+plot(ROCit_rf, col = c(2,"gray50"), legend = FALSE, YIndex = FALSE)
+lines(ROCit_lasso$TPR~ROCit_lasso$FPR, col = 1, lwd = 2)
+legend("bottomright", col = c(1,2), c("Lasso","RF"), lwd = 2)
 ```
 
 We save the ROC curve for next comparisons.
